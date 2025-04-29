@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CreditCard, QrCode, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
+import emailjs from 'emailjs-com';
 function Pagamento() {
   const navegacao = useNavigate();
   const location = useLocation();
@@ -47,38 +47,34 @@ function Pagamento() {
     }
   };
 
-  const enviarNFe = async (pedido) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invoice`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pedido: {
-            id: Math.random().toString(36).substr(2, 9),
-            email: usuario.email,
-            nome: dadosPagamento.nome || 'Cliente',
-            itens: itensCarrinho.map(item => ({
-              quantidade: item.quantidade,
-              nome: item.produto.nome,
-              preco: item.produto.preco
-            })),
-            total,
-            formaPagamento,
-            endereco: enderecoEntrega
-          }
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao enviar NFe');
-      }
-    } catch (erro) {
-      console.error('Erro ao enviar NFe:', erro);
-    }
+  const enviarNFe = async () => {
+    const pedidoId = location.state?.pedidoId || Math.random().toString(36).substr(2, 9);
+  
+    // Monta o array de pedidos
+    const orders = itensCarrinho.map(item => ({
+      name: `${item.quantidade}x ${item.produto.nome} (${item.produto.restaurante.nome})`,
+      units: item.quantidade,
+      price: (item.produto.preco * item.quantidade).toFixed(2),
+      image_url: item.produto.imagem || 'https://via.placeholder.com/64' // Imagem de fallback
+    }));
+  
+    const shipping = 0.00; // Substitua se você tiver taxa de entrega
+    const tax = 0.00;      // Substitua se você tiver cálculo de imposto
+  
+    emailjs.send('service_odnkte2', 'template_en9q65a', {
+      status_message: 'teste',
+      order_id: pedidoId,
+      orders: orders, // <-- Isso pode ficar como está, EmailJS v2 suporta loop
+      cost_shipping: shipping.toFixed(2),
+      cost_tax: tax.toFixed(2),
+      cost_total: (total + shipping + tax).toFixed(2),
+      to_email: usuario?.email
+    }, 'trUMBMErkFdAQ-Hfv')
+    
+    .then(() => console.log('E-mail enviado com sucesso!', usuario?.email))
+    .catch((err) => console.error('Erro ao enviar e-mail:', err));
   };
+  
 
   const processarPagamento = async () => {
     if (!formaPagamento) {

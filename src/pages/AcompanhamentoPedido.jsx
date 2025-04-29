@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, Truck, ChefHat, Search, Store } from 'lucide-react';
+import emailjs from 'emailjs-com';
+import { useAuth } from '../contexts/AuthContext';
 
 function AcompanhamentoPedido() {
+  const { usuario: user, estaAutenticado, logout } = useAuth();
   const navegacao = useNavigate();
   const location = useLocation();
   const [statusAtual, setStatusAtual] = useState(0);
   const [pedidoConcluido, setPedidoConcluido] = useState(false);
+  // alert('Produto adicionado ao carrinho!');
 
   const statusPedido = [
     {
@@ -44,6 +48,16 @@ function AcompanhamentoPedido() {
 
     const atualizarStatus = () => {
       if (statusAtual < statusPedido.length - 1) {
+        const novoStatus = statusPedido[statusAtual + 1].texto;
+
+        emailjs.send('service_odnkte2', 'template_8jfbbxh', {
+          status_message: `${novoStatus}`,
+          pedido_id: location.state?.pedidoId,
+          to_email: user?.email
+        }, 'trUMBMErkFdAQ-Hfv')
+        .then(() => console.log('E-mail enviado com sucesso!',user?.email, novoStatus ) )
+        .catch((err) => console.error('Erro ao enviar e-mail:', err));
+        
         setStatusAtual(prev => prev + 1);
       } else {
         setPedidoConcluido(true);
